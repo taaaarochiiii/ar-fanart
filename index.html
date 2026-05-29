@@ -18,6 +18,7 @@
       touch-action: manipulation;
     }
 
+    /* MindARが生成するカメラ映像だけを全画面背景として扱う */
     video:not(.ar-asset-video) {
       position: fixed !important;
       inset: 0 !important;
@@ -88,6 +89,7 @@
     }
   </style>
   <script>
+    // リオナ動画のグリーンバックを透過するためのシェーダー
     AFRAME.registerShader("chromakey", {
       schema: {
         src: { type: "map", is: "uniform" },
@@ -132,6 +134,44 @@
         }
       `
     });
+
+    // キラキラ動画の黒背景を透過するためのシェーダー
+    AFRAME.registerShader("blackkey", {
+      schema: {
+        src: { type: "map", is: "uniform" },
+        threshold: { type: "number", default: 0.08, is: "uniform" },
+        smoothness: { type: "number", default: 0.18, is: "uniform" },
+        opacity: { type: "number", default: 1, is: "uniform" }
+      },
+      vertexShader: `
+        varying vec2 vUv;
+
+        void main() {
+          vUv = uv;
+          gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+        }
+      `,
+      fragmentShader: `
+        uniform sampler2D src;
+        uniform float threshold;
+        uniform float smoothness;
+        uniform float opacity;
+        varying vec2 vUv;
+
+        void main() {
+          vec4 videoColor = texture2D(src, vUv);
+          float luminance = dot(videoColor.rgb, vec3(0.299, 0.587, 0.114));
+          float alpha = smoothstep(threshold, threshold + smoothness, luminance);
+          vec3 color = videoColor.rgb;
+
+          gl_FragColor = vec4(color, videoColor.a * alpha * opacity);
+
+          if (gl_FragColor.a < 0.01) {
+            discard;
+          }
+        }
+      `
+    });
   </script>
 </head>
 
@@ -144,18 +184,21 @@
     renderer="alpha: true; colorManagement: true; physicallyCorrectLights: true; preserveDrawingBuffer: true"
   >
     <a-assets>
-      <video id="riona-video" class="ar-asset-video" src="images/2_%E3%83%AA%E3%82%AA%E3%83%8A.mp4" loop muted playsinline webkit-playsinline preload="auto" crossorigin="anonymous"></video>
-      <img id="layer-confetti" src="images/3_%E7%B4%99%E5%90%B9%E9%9B%AA.png" crossorigin="anonymous">
-      <img id="layer-text-1-shadow" src="images/4_%E6%96%87%E5%AD%97_1_s.png" crossorigin="anonymous">
-      <img id="layer-text-1" src="images/5_%E6%96%87%E5%AD%97_1.png" crossorigin="anonymous">
-      <img id="layer-text-2-shadow" src="images/6_%E6%96%87%E5%AD%97_2_s.png" crossorigin="anonymous">
-      <img id="layer-text-2" src="images/7_%E6%96%87%E5%AD%97_2.png" crossorigin="anonymous">
+      <video id="riona-video" class="ar-asset-video" src="images/riona.mp4" loop muted playsinline webkit-playsinline preload="auto" crossorigin="anonymous"></video>
+      <video id="glitter-video" class="ar-asset-video" src="images/glitter.mp4" loop muted playsinline webkit-playsinline preload="auto" crossorigin="anonymous"></video>
+      <img id="layer-confetti" src="images/confetti.png" crossorigin="anonymous">
+      <img id="layer-text-1-shadow" src="images/message-top-shadow.png" crossorigin="anonymous">
+      <img id="layer-text-1" src="images/message-top.png" crossorigin="anonymous">
+      <img id="layer-text-2-shadow" src="images/message-bottom-shadow.png" crossorigin="anonymous">
+      <img id="layer-text-2" src="images/message-bottom.png" crossorigin="anonymous">
     </a-assets>
 
     <a-entity light="type: ambient; intensity: 1"></a-entity>
 
+    <!-- targetIndex: 0 に反応したときに表示するAR演出 -->
     <a-entity id="target0" mindar-image-target="targetIndex: 0">
       <a-entity position="0 0 0" scale="1 1 1">
+        <!-- リオナ本体 -->
         <a-plane
           width="1.412"
           height="1"
@@ -164,6 +207,7 @@
           animation__float="property: position; from: 0 -0.030 0.20; to: 0 0.035 0.20; dir: alternate; dur: 1900; easing: easeInOutSine; loop: true"
         ></a-plane>
 
+        <!-- 紙吹雪 -->
         <a-plane
           src="#layer-confetti"
           width="1.412"
@@ -173,6 +217,16 @@
           animation__blink="property: material.opacity; from: 0.18; to: 1; dir: alternate; dur: 1800; easing: easeInOutSine; loop: true"
         ></a-plane>
 
+        <!-- キラキラ動画 -->
+        <a-plane
+          width="1.412"
+          height="1"
+          position="0 0.02 0.30"
+          material="shader: blackkey; src: #glitter-video; threshold: 0.08; smoothness: 0.14; opacity: 0.6; transparent: true; depthWrite: false; depthTest: false; side: double; blending: additive"
+          animation__blink="property: material.opacity; from: 0.28; to: 0.65; dir: alternate; dur: 1400; easing: easeInOutSine; loop: true"
+        ></a-plane>
+
+        <!-- Happy Birthdayの影 -->
         <a-plane
           src="#layer-text-1-shadow"
           width="1.12"
@@ -182,6 +236,7 @@
           animation__sway="property: rotation; dir: alternate; dur: 1500; easing: easeInOutSine; loop: true; to: 0 0 6"
         ></a-plane>
 
+        <!-- Happy Birthday本体 -->
         <a-plane
           src="#layer-text-1"
           width="1.12"
@@ -191,6 +246,7 @@
           animation__sway="property: rotation; dir: alternate; dur: 1500; easing: easeInOutSine; loop: true; to: 0 0 8"
         ></a-plane>
 
+        <!-- RIONAの影 -->
         <a-plane
           src="#layer-text-2-shadow"
           width="1.32"
@@ -200,6 +256,7 @@
           animation__sway="property: rotation; dir: alternate; dur: 2000; easing: easeInOutSine; loop: true; to: 0 0 -5"
         ></a-plane>
 
+        <!-- RIONA本体 -->
         <a-plane
           src="#layer-text-2"
           width="1.32"
@@ -214,6 +271,7 @@
     <a-camera active="true" position="0 0 0" look-controls="enabled: false"></a-camera>
   </a-scene>
 
+  <!-- 撮影ボタン -->
   <div class="photo-controls">
     <button id="capture-button" class="capture-button" type="button" aria-label="Capture photo" title="Capture photo"></button>
   </div>
@@ -221,9 +279,10 @@
   <script>
     const sceneEl = document.querySelector("a-scene");
     const rionaTarget = document.getElementById("target0");
-    const rionaVideo = document.getElementById("riona-video");
-    let rionaVideoActive = false;
+    const arAssetVideos = Array.from(document.querySelectorAll(".ar-asset-video"));
+    let arVideosActive = false;
 
+    // ARシーンの背後にカメラ映像が常に表示されるようにする
     keepCameraFeedVisible();
     removeVrUi();
     sceneEl?.addEventListener("loaded", ensureTransparentRenderer);
@@ -235,44 +294,65 @@
     });
 
     setupPhotoCapture();
-    setupRionaVideo();
+    setupArVideos();
 
-    function setupRionaVideo() {
-      if (!rionaTarget || !rionaVideo) {
+    // ターゲット検出に合わせてAR素材動画を再生・停止する
+    function setupArVideos() {
+      if (!rionaTarget || arAssetVideos.length === 0) {
         return;
       }
 
       rionaTarget.addEventListener("targetFound", () => {
-        rionaVideoActive = true;
-        playVideo(rionaVideo);
+        arVideosActive = true;
+        playArVideos();
       });
 
       rionaTarget.addEventListener("targetLost", () => {
-        rionaVideoActive = false;
-        rionaVideo.pause();
+        arVideosActive = false;
+        pauseArVideos();
       });
 
       document.body.addEventListener("click", unlockArVideos, { once: true });
       document.body.addEventListener("touchstart", unlockArVideos, { once: true });
     }
 
+    // 初回操作でスマホの動画再生制限を解除する
     function unlockArVideos() {
-      playVideo(rionaVideo).then(() => {
-        if (!rionaVideoActive) {
-          rionaVideo.pause();
+      Promise.all(arAssetVideos.map(playVideo)).then(() => {
+        if (!arVideosActive) {
+          pauseArVideos();
         }
       });
     }
 
+    // AR素材動画をまとめて再生する
+    function playArVideos() {
+      arAssetVideos.forEach((video) => {
+        playVideo(video);
+      });
+    }
+
+    // AR素材動画をまとめて停止する
+    function pauseArVideos() {
+      arAssetVideos.forEach((video) => {
+        video.pause();
+      });
+    }
+
+    // 動画再生
     function playVideo(video) {
       if (!video) {
         return Promise.resolve();
       }
 
       video.muted = true;
+      if (video.id === "glitter-video") {
+        video.playbackRate = 0.8;
+      }
       return video.play().catch(() => {});
     }
 
+    // A-Frame標準のVR UIを消す
     function removeVrUi(attempt = 0) {
       document.querySelectorAll(".a-enter-vr, .a-enter-ar, .a-enter-vr-modal").forEach((element) => {
         element.remove();
@@ -283,6 +363,7 @@
       }
     }
 
+    // 撮影ボタンのクリック処理
     function setupPhotoCapture() {
       const captureButton = document.getElementById("capture-button");
 
@@ -309,6 +390,7 @@
       });
     }
 
+    // 現在のカメラ映像とAR描画を1枚のPNGに合成する
     function captureArPhoto() {
       const video = findCameraVideo();
       const arCanvas = findArCanvas();
@@ -345,6 +427,7 @@
       return canvasToPngBlob(outputCanvas);
     }
 
+    // Web Share API
     async function sharePhotoFile(file, fileName) {
       const sharePayload = {
         files: [file],
@@ -361,6 +444,7 @@
       return "downloaded";
     }
 
+    // MindARが生成したカメラ用videoを探す。AR素材動画は除外する
     function findCameraVideo() {
       const videos = Array.from(document.querySelectorAll("video"));
       return (
@@ -370,6 +454,7 @@
       );
     }
 
+    // カメラ背景として使えるvideoか判定する
     function isUsableCameraVideo(video) {
       return (
         !isArAssetVideo(video) &&
@@ -379,6 +464,7 @@
       );
     }
 
+    // AR素材動画か判定する
     function isArAssetVideo(video) {
       return (
         video.classList.contains("ar-asset-video") ||
@@ -386,10 +472,12 @@
       );
     }
 
+    // AR描画用canvasを取得する
     function findArCanvas() {
       return sceneEl?.renderer?.domElement || sceneEl?.canvas || document.querySelector("canvas");
     }
 
+    // 撮影前にARシーンを現在フレームで再描画する
     function renderCurrentFrame() {
       if (!sceneEl?.renderer || !sceneEl?.object3D || !sceneEl?.camera) {
         return;
@@ -399,6 +487,7 @@
       sceneEl.renderer.render(sceneEl.object3D, sceneEl.camera);
     }
 
+    // 端末の画面サイズに合わせて、撮影画像の出力サイズを決める
     function getCaptureSize(arCanvas) {
       const rect = arCanvas.getBoundingClientRect();
       const cssWidth = Math.max(1, Math.round(rect.width || window.innerWidth || 720));
@@ -415,6 +504,7 @@
       };
     }
 
+    // カメラ映像を出力キャンバスいっぱいにトリミングして描画する
     function drawCover(context, source, outputWidth, outputHeight) {
       const sourceWidth = source.videoWidth || source.width;
       const sourceHeight = source.videoHeight || source.height;
@@ -446,10 +536,12 @@
       );
     }
 
+    // canvasをPNG Blobに変換する
     function canvasToPngBlob(canvas) {
       return dataUrlToBlob(canvas.toDataURL("image/png"));
     }
 
+    // data URLをBlobに変換する
     function dataUrlToBlob(dataUrl) {
       const [header, base64] = dataUrl.split(",");
       const mimeMatch = header.match(/data:(.*?);base64/);
@@ -464,6 +556,7 @@
       return new Blob([bytes], { type: mime });
     }
 
+    // Blobをファイルとしてダウンロードする
     function downloadBlob(blob, fileName) {
       const objectUrl = URL.createObjectURL(blob);
       const link = document.createElement("a");
@@ -480,6 +573,7 @@
       }, 1000);
     }
 
+    // 撮影画像のファイル名を作る(例: riona-birthday-ar-photo-20240601T153045Z.png)
     function createPhotoFileName() {
       const stamp = new Date()
         .toISOString()
@@ -488,6 +582,7 @@
       return `riona-birthday-ar-photo-${stamp}.png`;
     }
 
+    // AR canvasの背景を透明にする
     function ensureTransparentRenderer() {
       if (!sceneEl?.renderer) {
         return;
@@ -497,6 +592,7 @@
       sceneEl.renderer.setClearAlpha(0);
     }
 
+    // カメラ映像がARシーンの背後に常に表示されるようにする
     function keepCameraFeedVisible() {
       ensureTransparentRenderer();
       keepCameraFeedVisibleOnce();
@@ -505,6 +601,7 @@
       window.setTimeout(keepCameraFeedVisibleOnce, 1000);
     }
 
+    // カメラ用videoだけを全画面背景にする
     function keepCameraFeedVisibleOnce() {
       ensureTransparentRenderer();
 
