@@ -184,13 +184,19 @@
     renderer="alpha: true; colorManagement: true; physicallyCorrectLights: true; preserveDrawingBuffer: true"
   >
     <a-assets>
-      <video id="riona-video" class="ar-asset-video" src="images/riona.mp4" loop muted playsinline webkit-playsinline preload="auto" crossorigin="anonymous"></video>
+      <video id="riona-video" class="ar-asset-video" src="images/riona/riona.mp4" loop muted playsinline webkit-playsinline preload="auto" crossorigin="anonymous"></video>
+      <video id="bancho-video" class="ar-asset-video" src="images/bancho/bancho.mp4" loop muted playsinline webkit-playsinline preload="auto" crossorigin="anonymous"></video>
       <video id="glitter-video" class="ar-asset-video" src="images/glitter.mp4" loop muted playsinline webkit-playsinline preload="auto" crossorigin="anonymous"></video>
-      <img id="layer-confetti" src="images/confetti.png" crossorigin="anonymous">
-      <img id="layer-text-1-shadow" src="images/message-top-shadow.png" crossorigin="anonymous">
-      <img id="layer-text-1" src="images/message-top.png" crossorigin="anonymous">
-      <img id="layer-text-2-shadow" src="images/message-bottom-shadow.png" crossorigin="anonymous">
-      <img id="layer-text-2" src="images/message-bottom.png" crossorigin="anonymous">
+      <img id="layer-confetti" src="images/riona/confetti.png" crossorigin="anonymous">
+      <img id="layer-text-1-shadow" src="images/riona/message-top-shadow.png" crossorigin="anonymous">
+      <img id="layer-text-1" src="images/riona/message-top.png" crossorigin="anonymous">
+      <img id="layer-text-2-shadow" src="images/riona/message-bottom-shadow.png" crossorigin="anonymous">
+      <img id="layer-text-2" src="images/riona/message-bottom.png" crossorigin="anonymous">
+      <img id="bancho-background" src="images/bancho/background.png" crossorigin="anonymous">
+      <img id="bancho-text-top-shadow" src="images/bancho/message-top-s.png" crossorigin="anonymous">
+      <img id="bancho-text-top" src="images/bancho/message-top.png" crossorigin="anonymous">
+      <img id="bancho-text-bottom-shadow" src="images/bancho/message-bottom-s.png" crossorigin="anonymous">
+      <img id="bancho-text-bottom" src="images/bancho/message-bottom.png" crossorigin="anonymous">
     </a-assets>
 
     <a-entity light="type: ambient; intensity: 1"></a-entity>
@@ -268,6 +274,72 @@
       </a-entity>
     </a-entity>
 
+    <a-entity id="target1" mindar-image-target="targetIndex: 1">
+      <a-entity position="0 -0.08 0" scale="1 1 1">
+        <a-plane
+          src="#bancho-background"
+          width="1.16"
+          height="1.64"
+          position="0 -0.12 0.16"
+          material="shader: flat; transparent: true; depthWrite: false; side: double; opacity: 1"
+          animation__float="property: position; from: 0 -0.140 0.16; to: 0 -0.095 0.16; dir: alternate; dur: 2200; easing: easeInOutSine; loop: true"
+        ></a-plane>
+
+        <a-plane
+          width="1.16"
+          height="1.64"
+          position="0 -0.06 0.22"
+          material="shader: chromakey; src: #bancho-video; keyColor: #00ff00; similarity: 0.38; smoothness: 0.10; spill: 0.85; transparent: true; depthWrite: false; side: double"
+          animation__float="property: position; from: 0 -0.072 0.22; to: 0 -0.044 0.22; dir: alternate; dur: 2200; easing: easeInOutSine; loop: true"
+        ></a-plane>
+
+        <a-plane
+          width="1.20"
+          height="1.70"
+          position="0 0.02 0.30"
+          scale="-1 -1 1"
+          material="shader: blackkey; src: #glitter-video; threshold: 0.08; smoothness: 0.14; opacity: 0.55; transparent: true; depthWrite: false; depthTest: false; side: double; blending: additive"
+          animation__blink="property: material.opacity; from: 0.24; to: 0.58; dir: alternate; dur: 1400; easing: easeInOutSine; loop: true"
+        ></a-plane>
+
+        <a-plane
+          src="#bancho-text-top-shadow"
+          width="1.20"
+          height="1.70"
+          position="0 -0.14 0.28"
+          material="shader: flat; transparent: true; depthWrite: false; side: double"
+          animation__sway="property: rotation; dir: alternate; dur: 1500; easing: easeInOutSine; loop: true; to: 0 0 5"
+        ></a-plane>
+
+        <a-plane
+          src="#bancho-text-top"
+          width="1.20"
+          height="1.70"
+          position="0 -0.10 0.34"
+          material="shader: flat; transparent: true; depthWrite: false; side: double"
+          animation__sway="property: rotation; dir: alternate; dur: 1500; easing: easeInOutSine; loop: true; to: 0 0 6"
+        ></a-plane>
+
+        <a-plane
+          src="#bancho-text-bottom-shadow"
+          width="1.42"
+          height="2.00"
+          position="0 0.14 0.32"
+          material="shader: flat; transparent: true; depthWrite: false; side: double"
+          animation__sway="property: rotation; dir: alternate; dur: 2000; easing: easeInOutSine; loop: true; to: 0 0 -4"
+        ></a-plane>
+
+        <a-plane
+          src="#bancho-text-bottom"
+          width="1.42"
+          height="2.00"
+          position="0 0.24 0.38"
+          material="shader: flat; transparent: true; depthWrite: false; side: double"
+          animation__sway="property: rotation; dir: alternate; dur: 2000; easing: easeInOutSine; loop: true; to: 0 0 -5"
+        ></a-plane>
+      </a-entity>
+    </a-entity>
+
     <a-camera active="true" position="0 0 0" look-controls="enabled: false"></a-camera>
   </a-scene>
 
@@ -278,8 +350,9 @@
 
   <script>
     const sceneEl = document.querySelector("a-scene");
-    const rionaTarget = document.getElementById("target0");
+    const arTargets = Array.from(document.querySelectorAll("[mindar-image-target]"));
     const arAssetVideos = Array.from(document.querySelectorAll(".ar-asset-video"));
+    const activeArTargets = new Set();
     let arVideosActive = false;
 
     // ARシーンの背後にカメラ映像が常に表示されるようにする
@@ -298,18 +371,25 @@
 
     // ターゲット検出に合わせてAR素材動画を再生・停止する
     function setupArVideos() {
-      if (!rionaTarget || arAssetVideos.length === 0) {
+      if (arTargets.length === 0 || arAssetVideos.length === 0) {
         return;
       }
 
-      rionaTarget.addEventListener("targetFound", () => {
-        arVideosActive = true;
-        playArVideos();
-      });
+      arTargets.forEach((target) => {
+        target.addEventListener("targetFound", () => {
+          activeArTargets.add(target);
+          arVideosActive = true;
+          playArVideos();
+        });
 
-      rionaTarget.addEventListener("targetLost", () => {
-        arVideosActive = false;
-        pauseArVideos();
+        target.addEventListener("targetLost", () => {
+          activeArTargets.delete(target);
+          arVideosActive = activeArTargets.size > 0;
+
+          if (!arVideosActive) {
+            pauseArVideos();
+          }
+        });
       });
 
       document.body.addEventListener("click", unlockArVideos, { once: true });
